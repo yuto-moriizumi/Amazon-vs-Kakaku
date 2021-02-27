@@ -1,14 +1,10 @@
-import dotenv from "dotenv";
-//envファイルの読み込み
-dotenv.config();
-
 import createError from "http-errors";
 import Express from "express";
 import logger from "morgan";
 import cors from "cors";
 import helmet from "helmet";
 
-import usersRouter from "./routes/users";
+import products from "./routes/products";
 
 const app = Express();
 
@@ -20,11 +16,11 @@ app.use(Express.json());
 app.use(Express.urlencoded({ extended: true }));
 
 //apiルータへ
-app.use("/users", usersRouter);
+app.use("/products", products);
 
 //ダミー
 app.get("/", (req, res) => {
-  res.status(200).send("welcome to shizudaisei finder 2 api server");
+  res.status(200).send("Welcome to Amazon vs Kakaku API server!");
 });
 
 // catch 404 and forward to error handler
