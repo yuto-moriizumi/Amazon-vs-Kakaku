@@ -1,10 +1,13 @@
 import React from "react";
-import { Image, Button, Container, Nav, Navbar, Table, Spinner } from "react-bootstrap";
+import { Button, Container, Nav, Navbar, Table, Spinner } from "react-bootstrap";
 import axios from "axios";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
 
 type State = {
   is_updating: boolean;
   products: Product[];
+  is_adding: boolean;
 };
 type Product = {
   id: number;
@@ -14,53 +17,43 @@ type Product = {
   url_kakaku: string;
 };
 export default class App extends React.Component<{}, State> {
-  state = { is_updating: false, products: new Array<Product>() };
+  state = { is_updating: false, products: new Array<Product>(), is_adding: false };
   private SERVER_HOST = process.env.REACT_APP_SERVER_URL || "SERVER_HOST";
 
-  constructor(props: any) {
-    super(props);
-    axios.get(`${this.SERVER_HOST}/products`).then((res) => this.setState({ products: res.data }));
+  componentDidMount() {
+    this.update();
   }
 
   private async update() {
-    // this.setState({ is_updating: true });
-    // try {
-    //   const res = await axios.get(`${this.SERVER_HOST}/servers`);
-    //   if (res) this.setState({ products: res.data });
-    //   this.state.servers.forEach((server) => {
-    //     axios
-    //       .get(`${this.SERVER_HOST}/servers/${server.guid}`)
-    //       .catch((e) => console.log(e))
-    //       .then((res) => {
-    //         const res2 = res as { data: any };
-    //         if (res2 === undefined) return;
-    //         console.log(res2.data);
-    //         this.setState({
-    //           servers: this.state.servers.map((server2) => {
-    //             if (server2 === server) server2.teams = res2.data;
-    //             return server2;
-    //           }),
-    //         });
-    //       });
-    //   });
-    // } catch (error) {
-    //   console.log(error);
-    // } finally {
-    //   this.setState({ isUpdate: false });
-    // }
+    this.setState({ is_updating: true });
+    try {
+      const res = await axios.get(`${this.SERVER_HOST}/products`);
+      console.log(res.data);
+      this.setState({ products: res.data });
+      // this.state.products.forEach((product) => {
+      //   // console.log(this.getAmazonPrice(product.url_com));
+      // });
+    } catch (error) {
+      console.log(error);
+    }
+    this.setState({ is_updating: false });
   }
-  // private getTicketDiff(teams: Team[]) {
-  //   if (!(teams instanceof Array) || teams.length < 2) return <>NONE</>;
-  //   //降順に整列
-  //   const sorted_teams = teams.sort((a, b) => b.ticket - a.ticket);
-  //   const obj = { winner: sorted_teams[0].name, diff: sorted_teams[0].ticket - sorted_teams[1].ticket };
-  //   return (
-  //     <>
-  //       <p className="mb-0">優勢：{obj.winner}</p>
-  //       <p className="mb-0">差：{obj.diff}</p>
-  //     </>
-  //   );
-  // }
+
+  private getAmazonPrice(url: string) {
+    axios.get(url).then((res) => {
+      // const document = new JSDOM(res.data).window.document;
+      // const hover = document.getElementById("a-popover-content-4");
+      // // const price_spans = hover?.getElementsByClassName("a-size-base a-color-base");
+      // if (!price_spans) return;
+      // console.log(price_spans[0]);
+      // for (const price_span of price_spans) {
+      // }
+      // Array.from(price_spans).forEach((price_span) => {
+      //   //   console.log(price_span.textContent);
+      // });
+    });
+  }
+
   render() {
     return (
       <>
@@ -106,6 +99,31 @@ export default class App extends React.Component<{}, State> {
               })}
             </tbody>
           </Table>
+          <Button
+            size="lg"
+            className="my-4"
+            disabled={this.state.is_adding}
+            onClick={() => {
+              const new_product = {
+                name: "name",
+                type: "type",
+                url_com: "url_com",
+                url_kakaku: "url_kakaku",
+              };
+              this.setState({ is_adding: true });
+              axios
+                .post(`${this.SERVER_HOST}/products`, new_product)
+                .then((res) => {
+                  const data = res.data as { id: number };
+                  console.log(data);
+                  this.setState({ products: this.state.products.concat([{ id: data.id, ...new_product }]) });
+                })
+                .catch((e) => console.log(e))
+                .finally(() => this.setState({ is_adding: false }));
+            }}
+          >
+            {this.state.is_adding ? <Spinner animation="border" /> : <FontAwesomeIcon icon={faPlus} />}
+          </Button>
         </Container>
       </>
     );

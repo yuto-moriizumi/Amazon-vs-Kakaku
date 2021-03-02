@@ -25,11 +25,9 @@ interface ProductWithID extends Product {
 router.get("/", async (req, res) => {
   const connection = await mysql2.createConnection(DB_SETTING);
   await connection.connect();
-  const [result, fields] = await connection.query(
-    "SELECT * FROM users ORDER BY created_at DESC"
-  );
-  const users = result as ProductWithID[];
-  res.send(users);
+  const [result, fields] = await connection.query("SELECT * FROM products");
+  const products = result as ProductWithID[];
+  res.send(products);
   connection.end();
 });
 
@@ -45,8 +43,11 @@ router.post("/", async (req, res) => {
       [product.name, product.type, product.url_com, product.url_kakaku]
     );
     //自動採番を取得
-    const id = await connection.query("SELECT LAST_INSERT_ID()");
-    res.status(201).send({ id: id });
+    const [result, fields] = await connection.query(
+      "SELECT LAST_INSERT_ID() AS LAST_INSERT_ID"
+    );
+    const id = result as { LAST_INSERT_ID: number }[];
+    res.status(201).send({ id: id[0].LAST_INSERT_ID });
   } catch (error) {
     console.log(error);
     res.status(500).send();
