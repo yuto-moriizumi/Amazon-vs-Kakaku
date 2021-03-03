@@ -11,6 +11,7 @@ services:
       - "80:3000"
     environment:
       REACT_APP_SERVER_URL: "http://localhost:3000"
+      REACT_APP_OER_APP_ID: $REACT_APP_OER_APP_ID
   api:
     image: node:14.15.4-buster-slim
     container_name: api-container

@@ -21,8 +21,8 @@ interface Product {
 
 interface ExProduct extends Product {
   id: number;
-  price_com: number;
-  price_kakaku: number;
+  price_com: string;
+  price_kakaku: string;
 }
 
 // 製品を全て取得
@@ -36,7 +36,7 @@ router.get("/", async (req, res) => {
       await Promise.all(
         products.map(async (product) => {
           product.price_com = await getAmazonPrice(product.url_com);
-          product.price_kakaku = -1;
+          product.price_kakaku = await getKakakuPrice(product.url_kakaku);
           return product;
         })
       )
@@ -48,34 +48,56 @@ router.get("/", async (req, res) => {
   connection.end();
 });
 
+//Aamazon.comの商品URLから価格を取得します $12.34 形式
 async function getAmazonPrice(url: string) {
   try {
     const url_object = new URL(url);
-  } catch (error) {
-    return -1;
-  }
-  const res = await axios.get(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:86.0) Gecko/20100101 Firefox/86.0",
-    },
-  });
+    const res = await axios.get(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:86.0) Gecko/20100101 Firefox/86.0",
+      },
+    });
 
-  const document = new JSDOM(res.data).window.document;
-  const priceblock_ourprice = document.getElementById("priceblock_ourprice");
-  if (!priceblock_ourprice) return -1;
-  const ourprice_shippingmessage = document.getElementById(
-    "ourprice_shippingmessage"
-  );
-  if (!ourprice_shippingmessage) return -1;
-  //[Shipping & Import Fees Deposit, Price, AmazonGlobal Shipping, Estimated Import Fees Deposit, Total]
-  const pricesWith$ = ourprice_shippingmessage.textContent?.match(/\$[\d\.]*/g);
-  console.log(priceblock_ourprice.textContent, pricesWith$);
-  if (!pricesWith$) return -1;
-  const prices = pricesWith$.map((price) => {
-    return parseFloat(price.slice(1));
-  });
-  return prices[1] + prices[2];
+    const document = new JSDOM(res.data).window.document;
+    const priceblock_ourprice = document.getElementById("priceblock_ourprice");
+    if (!priceblock_ourprice) return "ERROR";
+    const ourprice_shippingmessage = document.getElementById(
+      "ourprice_shippingmessage"
+    );
+    if (!ourprice_shippingmessage) return "ERROR";
+    //[Shipping & Import Fees Deposit, Price, AmazonGlobal Shipping, Estimated Import Fees Deposit, Total]
+    const pricesWith$ = ourprice_shippingmessage.textContent?.match(
+      /\$[\d\.]*/g
+    );
+    // console.log(priceblock_ourprice.textContent, pricesWith$);
+    if (!pricesWith$) return "ERROR";
+    const prices = pricesWith$.map((price) => {
+      return parseFloat(price.slice(1));
+    });
+    return `$${prices[1] + prices[2]}`;
+  } catch (error) {
+    return "ERROR";
+  }
+}
+
+//価格.comの商品URLから価格を取得します ￥10,000 形式
+async function getKakakuPrice(url: string) {
+  try {
+    const url_object = new URL(url);
+    const res = await axios.get(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:86.0) Gecko/20100101 Firefox/86.0",
+      },
+    });
+    const document = new JSDOM(res.data).window.document;
+    const price = document.getElementsByClassName("priceTxt");
+    if (price.length === 0) return "ERROR";
+    return price[0].textContent ?? "ERROR";
+  } catch (error) {
+    return "ERROR";
+  }
 }
 
 // 商品を登録

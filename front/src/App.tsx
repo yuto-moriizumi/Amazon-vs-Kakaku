@@ -1,56 +1,71 @@
 import React from "react";
-import { Button, Container, Nav, Navbar, Table, Spinner } from "react-bootstrap";
+import { Button, Container, Nav, Navbar, Table, Spinner, Form } from "react-bootstrap";
 import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faTimes } from "@fortawesome/free-solid-svg-icons";
 
 type State = {
   is_updating: boolean;
   products: Product[];
   is_adding: boolean;
 };
-type Product = {
+interface Product {
   id: number;
   name: string;
   type: string;
   url_com: string;
   url_kakaku: string;
+  price_com_num: number;
+  price_kakaku_num: number;
+  price_com: string;
+  price_kakaku: string;
+}
+type ResponceOER = {
+  rates: { JPY: number };
 };
 export default class App extends React.Component<{}, State> {
   state = { is_updating: false, products: new Array<Product>(), is_adding: false };
   private SERVER_HOST = process.env.REACT_APP_SERVER_URL || "SERVER_HOST";
+  private OER_APP_ID = process.env.REACT_APP_OER_APP_ID || "OER_APP_ID";
+  private exchange_rate = 0;
 
   componentDidMount() {
     this.update();
+    this.getExchangeRate();
   }
 
   private async update() {
     this.setState({ is_updating: true });
     try {
       const res = await axios.get(`${this.SERVER_HOST}/products`);
-      console.log(res.data);
-      this.setState({ products: res.data });
-      // this.state.products.forEach((product) => {
-      //   // console.log(this.getAmazonPrice(product.url_com));
-      // });
+      const products = res.data as Product[];
+      console.log(products);
+      this.setState({
+        products: products,
+      });
     } catch (error) {
       console.log(error);
     }
     this.setState({ is_updating: false });
   }
 
-  private getAmazonPrice(url: string) {
-    axios.get(url).then((res) => {
-      // const document = new JSDOM(res.data).window.document;
-      // const hover = document.getElementById("a-popover-content-4");
-      // // const price_spans = hover?.getElementsByClassName("a-size-base a-color-base");
-      // if (!price_spans) return;
-      // console.log(price_spans[0]);
-      // for (const price_span of price_spans) {
-      // }
-      // Array.from(price_spans).forEach((price_span) => {
-      //   //   console.log(price_span.textContent);
-      // });
+  private putProduct(product: Product) {
+    axios.put(`${this.SERVER_HOST}/products/${product.id}`, product);
+  }
+
+  //1$何円かを返す
+  private async getExchangeRate() {
+    const res = await axios.get(`https://openexchangerates.org/api/latest.json?app_id=${this.OER_APP_ID}`);
+    const data = res.data as ResponceOER;
+    const JPY = data.rates.JPY;
+    this.exchange_rate = JPY;
+  }
+
+  private async delete(index: number) {
+    const product = this.state.products[index];
+    await axios.delete(`${this.SERVER_HOST}/products/${product.id}`);
+    this.setState({
+      products: this.state.products.filter((product2) => product !== product2),
     });
   }
 
@@ -66,7 +81,7 @@ export default class App extends React.Component<{}, State> {
             <Nav className="ml-auto"></Nav>
           </Navbar.Collapse>
         </Navbar>
-        <Container className="text-center">
+        <Container className="text-center" fluid>
           <Button
             size="lg"
             className="my-4"
@@ -84,16 +99,86 @@ export default class App extends React.Component<{}, State> {
                 <th>種類</th>
                 <th>Amazon.com URL</th>
                 <th>価格.com URL</th>
+                <th>Amazon.com 価格</th>
+                <th>価格.com 価格</th>
+                <th>差</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
-              {this.state.products.map((product) => {
+              {this.state.products.map((product, index) => {
+                const price_com = Math.round(parseFloat(product.price_com.slice(1)) * this.exchange_rate);
+                const price_kakaku = parseInt(product.price_kakaku.slice(1).replace(",", ""));
                 return (
                   <tr key={product.id}>
-                    <td className="p-1">{product.name}</td>
-                    <td className="p-1">{product.type}</td>
-                    <td className="p-1">{product.url_com}</td>
-                    <td className="p-1">{product.url_kakaku}</td>
+                    <td className="p-1">
+                      <Form.Control
+                        value={product.name}
+                        onChange={(e) => {
+                          this.setState({
+                            products: this.state.products.map((product2) => {
+                              if (product2 === product) product2.name = e.target.value;
+                              return product2;
+                            }),
+                          });
+                          this.putProduct(product);
+                        }}
+                      />
+                    </td>
+                    <td className="p-1">
+                      <Form.Control
+                        value={product.type}
+                        onChange={(e) => {
+                          this.setState({
+                            products: this.state.products.map((product2) => {
+                              if (product2 === product) product2.type = e.target.value;
+                              return product2;
+                            }),
+                          });
+                          this.putProduct(product);
+                        }}
+                      />
+                    </td>
+                    <td className="p-1">
+                      <Form.Control
+                        value={product.url_com}
+                        onChange={(e) => {
+                          this.setState({
+                            products: this.state.products.map((product2) => {
+                              if (product2 === product) product2.url_com = e.target.value;
+                              return product2;
+                            }),
+                          });
+                          this.putProduct(product);
+                        }}
+                      />
+                    </td>
+                    <td className="p-1">
+                      <Form.Control
+                        value={product.url_kakaku}
+                        onChange={(e) => {
+                          this.setState({
+                            products: this.state.products.map((product2) => {
+                              if (product2 === product) product2.url_kakaku = e.target.value;
+                              return product2;
+                            }),
+                          });
+                          this.putProduct(product);
+                        }}
+                      />
+                    </td>
+                    <td className="p-1">{price_com.toString()}</td>
+                    <td className="p-1">{price_kakaku.toString()}</td>
+                    <td className="p-1">{(price_kakaku - price_com).toString()}</td>
+                    <td className="p-1">
+                      <Button
+                        onClick={() => {
+                          this.delete(index);
+                        }}
+                      >
+                        <FontAwesomeIcon icon={faTimes} />
+                      </Button>
+                    </td>
                   </tr>
                 );
               })}
@@ -116,7 +201,18 @@ export default class App extends React.Component<{}, State> {
                 .then((res) => {
                   const data = res.data as { id: number };
                   console.log(data);
-                  this.setState({ products: this.state.products.concat([{ id: data.id, ...new_product }]) });
+                  this.setState({
+                    products: this.state.products.concat([
+                      {
+                        id: data.id,
+                        price_com: "NONE",
+                        price_kakaku: "NONE",
+                        price_com_num: -1,
+                        price_kakaku_num: -1,
+                        ...new_product,
+                      },
+                    ]),
+                  });
                 })
                 .catch((e) => console.log(e))
                 .finally(() => this.setState({ is_adding: false }));
