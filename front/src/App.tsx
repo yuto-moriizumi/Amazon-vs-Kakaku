@@ -38,10 +38,20 @@ export default class App extends React.Component<{}, State> {
     this.setState({ is_updating: true });
     try {
       const res = await axios.get(`${this.SERVER_HOST}/products`);
-      const products = res.data as Product[];
+      const products = (res.data as Product[]).map((product) => {
+        product.price_com_num = this.USD2JPY(product.price_com);
+        product.price_kakaku_num = this.parseJPY(product.price_kakaku);
+        return product;
+      });
       console.log(products);
       this.setState({
-        products: products,
+        products: products.sort((a, b) => {
+          let a_diff = a.price_kakaku_num - a.price_com_num;
+          if (isNaN(a_diff)) a_diff = -99999;
+          let b_diff = b.price_kakaku_num - b.price_com_num;
+          if (isNaN(b_diff)) b_diff = -99999;
+          return b_diff - a_diff;
+        }),
       });
     } catch (error) {
       console.log(error);
@@ -67,6 +77,14 @@ export default class App extends React.Component<{}, State> {
     this.setState({
       products: this.state.products.filter((product2) => product !== product2),
     });
+  }
+
+  private USD2JPY(str: string) {
+    return Math.round(parseFloat(str.slice(1)) * this.exchange_rate);
+  }
+
+  private parseJPY(str: string) {
+    return parseInt(str.slice(1).replace(",", ""));
   }
 
   render() {
@@ -107,8 +125,8 @@ export default class App extends React.Component<{}, State> {
             </thead>
             <tbody>
               {this.state.products.map((product, index) => {
-                const price_com = Math.round(parseFloat(product.price_com.slice(1)) * this.exchange_rate);
-                const price_kakaku = parseInt(product.price_kakaku.slice(1).replace(",", ""));
+                const price_com = this.USD2JPY(product.price_com);
+                const price_kakaku = this.parseJPY(product.price_kakaku);
                 return (
                   <tr key={product.id}>
                     <td className="p-1">
