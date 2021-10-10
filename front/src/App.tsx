@@ -110,6 +110,7 @@ export default class App extends React.Component<{}, State> {
           >
             {this.state.is_updating ? <Spinner animation="border" /> : "更新"}
           </Button>
+          <p>Amazon.comのURLを入れる際は、refパラメータを外すこと</p>
           <Table striped bordered hover>
             <thead>
               <tr>
