@@ -1,7 +1,7 @@
 import express from "express";
 import mysql2 from "mysql2/promise";
 import { JSDOM } from "jsdom";
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 
 const router = express.Router();
 
@@ -52,14 +52,23 @@ router.get("/", async (req, res) => {
 async function getAmazonPrice(url: string) {
   try {
     const url_object = new URL(url);
-    const res = await axios.get(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:86.0) Gecko/20100101 Firefox/86.0",
-      },
-    });
+    let data: any;
 
-    const document = new JSDOM(res.data).window.document;
+    //try 3 times
+    for (let i = 0; i < 3; i++) {
+      const res = await axios.get(url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0",
+        },
+      });
+      if (res.status.toString().startsWith("2")) {
+        data = res.data;
+        break;
+      }
+    }
+
+    const document = new JSDOM(data).window.document;
     const body_txt = document.body.textContent;
 
     if (!body_txt) return "ERROR";
