@@ -60,23 +60,31 @@ async function getAmazonPrice(url: string) {
     });
 
     const document = new JSDOM(res.data).window.document;
-    const priceblock_ourprice = document.getElementById("priceblock_ourprice");
-    if (!priceblock_ourprice) return "ERROR";
-    const ourprice_shippingmessage = document.getElementById(
-      "ourprice_shippingmessage"
-    );
-    if (!ourprice_shippingmessage) return "ERROR";
-    //[Shipping & Import Fees Deposit, Price, AmazonGlobal Shipping, Estimated Import Fees Deposit, Total]
-    const pricesWith$ = ourprice_shippingmessage.textContent?.match(
-      /\$[\d\.]*/g
-    );
-    // console.log(priceblock_ourprice.textContent, pricesWith$);
+    const body_txt = document.body.textContent;
+
+    if (!body_txt) return "ERROR";
+    const pricesWith$ = body_txt.match(/\$\d+[\d\.]+/g);
+
+    // Array Structure
+    // P = Price
+    // T = Total
+    // AGS = AmazonGlobal Shipping
+    // EIFD = Estimated Import Fees Deposit
+    // Actual Cost = P + AGS
+    // [P, T, P, AGS, EIFD, T, ...]
     if (!pricesWith$) return "ERROR";
-    const prices = pricesWith$.map((price) => {
-      return parseFloat(price.slice(1));
-    });
-    return `$${prices[1] + prices[2]}`;
+    console.log(pricesWith$);
+    const price = pricesWith$
+      .slice(2, 4)
+      .map((price) => {
+        return parseFloat(price.slice(1));
+      })
+      .reduce((sum, element) => {
+        return sum + element;
+      }, 0);
+    return `$${price}`;
   } catch (error) {
+    console.error(error);
     return "ERROR";
   }
 }
