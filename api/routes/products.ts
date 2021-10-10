@@ -82,7 +82,7 @@ async function getAmazonPrice(url: string) {
     // Actual Cost = P + AGS
     // [P, T, P, AGS, EIFD, T, ...]
     if (!pricesWith$) return "ERROR";
-    console.log(pricesWith$);
+    // console.log(pricesWith$);
     const price = pricesWith$
       .slice(2, 4)
       .map((price) => {
