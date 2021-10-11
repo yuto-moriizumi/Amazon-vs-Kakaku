@@ -2,9 +2,12 @@ import express from "express";
 import mysql2 from "mysql2/promise";
 import { JSDOM } from "jsdom";
 import axios, { AxiosResponse } from "axios";
+import dayjs from "dayjs";
+import e from "express";
 
 const router = express.Router();
 
+const CACHE_HOURS = 24;
 const DB_SETTING = {
   host: process.env.RDS_HOSTNAME,
   user: process.env.RDS_USERNAME,
@@ -19,10 +22,11 @@ interface Product {
   url_kakaku: string;
 }
 
-interface ExProduct extends Product {
+interface DbProduct extends Product {
   id: number;
   price_com: string;
   price_kakaku: string;
+  cached_at: string;
 }
 
 // 製品を全て取得
@@ -31,16 +35,42 @@ router.get("/", async (req, res) => {
   try {
     await connection.connect();
     const [result, fields] = await connection.query("SELECT * FROM products");
-    const products = result as ExProduct[];
-    res.send(
-      await Promise.all(
-        products.map(async (product) => {
-          product.price_com = await getAmazonPrice(product.url_com);
-          product.price_kakaku = await getKakakuPrice(product.url_kakaku);
-          return product;
-        })
-      )
+    const products = result as DbProduct[];
+
+    //古い商品情報を更新
+
+    const products2update: DbProduct[] = [];
+    const latest_products: DbProduct[] = [];
+
+    // キャッシュ日時から CACHE_HOURS 時間経過後であるならば更新の必要がある
+    // この条件に基づき配列を分割
+    for (const product of products) {
+      if (dayjs().isAfter(dayjs(product.cached_at).add(CACHE_HOURS, "hours")))
+        products2update.push(product);
+      else latest_products.push(product);
+    }
+
+    const updated_products = await Promise.all(
+      products2update.map(async (product) => {
+        product.price_com = await getAmazonPrice(product.url_com);
+        product.price_kakaku = await getKakakuPrice(product.url_kakaku);
+        return product;
+      })
     );
+
+    // 最新に更新された商品情報をデータベースに登録
+    // 価格文字列には先頭に$があるので除去
+    for await (const product of updated_products) {
+      await connection.execute(
+        "UPDATE products SET price_com=?, price_kakaku=?, cached_at=NOW() WHERE id=?",
+        [
+          product.price_com.slice(1),
+          product.price_kakaku.slice(1).replace(",", ""), // 価格コムの価格には,が含まれるので除去
+          product.id,
+        ]
+      );
+    }
+    res.send(latest_products.concat(updated_products));
   } catch (error) {
     console.log(error);
     res.status(500).send();
