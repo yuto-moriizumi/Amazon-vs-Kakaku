@@ -159,7 +159,7 @@ router.post("/", async (req, res) => {
   try {
     await connection.connect();
     await connection.execute(
-      "INSERT IGNORE products VALUES (NULL, ?, ?, ?, ?)",
+      "INSERT IGNORE products VALUES (NULL, ?, ?, ?, ?, 0, 0, '1990-10-10')",
       [product.name, product.type, product.url_com, product.url_kakaku]
     );
     //自動採番を取得
