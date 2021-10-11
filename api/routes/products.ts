@@ -1,9 +1,8 @@
 import express from "express";
 import mysql2 from "mysql2/promise";
 import { JSDOM } from "jsdom";
-import axios, { AxiosResponse } from "axios";
+import axios from "axios";
 import dayjs from "dayjs";
-import e from "express";
 
 const router = express.Router();
 
@@ -24,8 +23,8 @@ interface Product {
 
 interface DbProduct extends Product {
   id: number;
-  price_com: string;
-  price_kakaku: string;
+  price_com: number;
+  price_kakaku: number;
   cached_at: string;
 }
 
@@ -52,24 +51,25 @@ router.get("/", async (req, res) => {
 
     const updated_products = await Promise.all(
       products2update.map(async (product) => {
-        product.price_com = await getAmazonPrice(product.url_com);
-        product.price_kakaku = await getKakakuPrice(product.url_kakaku);
+        const price_com = await getAmazonPrice(product.url_com);
+        if (!(price_com instanceof Error)) {
+          product.price_com = price_com;
+        }
+        const price_kakaku = await getKakakuPrice(product.url_kakaku);
+        if (!(price_kakaku instanceof Error)) {
+          product.price_kakaku = price_kakaku;
+        }
+        if (!(price_com instanceof Error || price_kakaku instanceof Error)) {
+          //どちらもエラーでなければキャッシュを更新
+          await connection.execute(
+            "UPDATE products SET price_com=?, price_kakaku=?, cached_at=NOW() WHERE id=?",
+            [product.price_com, product.price_kakaku, product.id]
+          );
+        }
         return product;
       })
     );
 
-    // 最新に更新された商品情報をデータベースに登録
-    // 価格文字列には先頭に$があるので除去
-    for await (const product of updated_products) {
-      await connection.execute(
-        "UPDATE products SET price_com=?, price_kakaku=?, cached_at=NOW() WHERE id=?",
-        [
-          product.price_com.slice(1),
-          product.price_kakaku.slice(1).replace(",", ""), // 価格コムの価格には,が含まれるので除去
-          product.id,
-        ]
-      );
-    }
     res.send(latest_products.concat(updated_products));
   } catch (error) {
     console.log(error);
@@ -101,7 +101,7 @@ async function getAmazonPrice(url: string) {
     const document = new JSDOM(data).window.document;
     const body_txt = document.body.textContent;
 
-    if (!body_txt) return "ERROR";
+    if (!body_txt) return Error("Body text content was null or undefined");
     const pricesWith$ = body_txt.match(/\$\d+[\d\.]+/g);
 
     // Array Structure
@@ -111,7 +111,7 @@ async function getAmazonPrice(url: string) {
     // EIFD = Estimated Import Fees Deposit
     // Actual Cost = P + AGS
     // [P, T, P, AGS, EIFD, T, ...]
-    if (!pricesWith$) return "ERROR";
+    if (!pricesWith$) return Error("Prices was not found");
     // console.log(pricesWith$);
     const price = pricesWith$
       .slice(2, 4)
@@ -121,10 +121,10 @@ async function getAmazonPrice(url: string) {
       .reduce((sum, element) => {
         return sum + element;
       }, 0);
-    return `$${price}`;
+    return price;
   } catch (error) {
     console.error(error);
-    return "ERROR";
+    return Error("An unexpected error occured");
   }
 }
 
@@ -139,11 +139,15 @@ async function getKakakuPrice(url: string) {
       },
     });
     const document = new JSDOM(res.data).window.document;
-    const price = document.getElementsByClassName("priceTxt");
-    if (price.length === 0) return "ERROR";
-    return price[0].textContent ?? "ERROR";
+    const price_elements = document.getElementsByClassName("priceTxt");
+    if (price_elements.length === 0) return Error("Price text was not found");
+    const price_str = price_elements[0].textContent;
+    if (price_str == null) return Error("Price text was not found");
+    const price = parseInt(price_str.replace(",", "").slice(1)); //円マークを切り落とし、,表記をなくす
+    return price;
   } catch (error) {
-    return "ERROR";
+    console.log(error);
+    return Error("An unexpected error occured");
   }
 }
 
