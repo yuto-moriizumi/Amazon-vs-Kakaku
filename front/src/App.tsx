@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Container, Nav, Navbar, Table, Spinner, Form } from "react-bootstrap";
+import { Button, Container, Nav, Navbar, Table, Spinner, Form, Col } from "react-bootstrap";
 import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTimes } from "@fortawesome/free-solid-svg-icons";
@@ -111,17 +111,33 @@ export default class App extends React.Component<{}, State> {
             {this.state.is_updating ? <Spinner animation="border" /> : "更新"}
           </Button>
           <p>Amazon.comのURLを入れる際は、refパラメータを外すこと</p>
-          <Table striped bordered hover>
+          <Table striped bordered hover size={"sm"}>
             <thead>
               <tr>
-                <th>商品名</th>
-                <th>種類</th>
-                <th>Amazon.com URL</th>
-                <th>価格.com URL</th>
-                <th>Amazon.com 価格</th>
-                <th>価格.com 価格</th>
-                <th>差</th>
-                <th></th>
+                <Col xs={2} as={"th"}>
+                  商品名
+                </Col>
+                <Col xs={1} as={"th"}>
+                  種類
+                </Col>
+                <Col xs={4} as={"th"}>
+                  Amazon.com URL
+                </Col>
+                <Col xs={2} as={"th"}>
+                  価格.com URL
+                </Col>
+                <Col xs={"auto"} as={"th"}>
+                  Amazon.com 価格
+                </Col>
+                <Col xs={"auto"} as={"th"}>
+                  価格.com 価格
+                </Col>
+                <Col xs={"auto"} as={"th"}>
+                  差
+                </Col>
+                <Col xs={"auto"} as={"th"}>
+                  削除
+                </Col>
               </tr>
             </thead>
             <tbody>
@@ -130,7 +146,7 @@ export default class App extends React.Component<{}, State> {
                 const price_kakaku = this.parseJPY(product.price_kakaku);
                 return (
                   <tr key={product.id}>
-                    <td className="p-1">
+                    <td>
                       <Form.Control
                         value={product.name}
                         onChange={(e) => {
@@ -144,7 +160,7 @@ export default class App extends React.Component<{}, State> {
                         }}
                       />
                     </td>
-                    <td className="p-1">
+                    <td>
                       <Form.Control
                         value={product.type}
                         onChange={(e) => {
@@ -158,7 +174,7 @@ export default class App extends React.Component<{}, State> {
                         }}
                       />
                     </td>
-                    <td className="p-1">
+                    <td>
                       <Form.Control
                         value={product.url_com}
                         onChange={(e) => {
@@ -172,7 +188,7 @@ export default class App extends React.Component<{}, State> {
                         }}
                       />
                     </td>
-                    <td className="p-1">
+                    <td>
                       <Form.Control
                         value={product.url_kakaku}
                         onChange={(e) => {
@@ -186,10 +202,16 @@ export default class App extends React.Component<{}, State> {
                         }}
                       />
                     </td>
-                    <td className="p-1">{price_com.toString()}</td>
-                    <td className="p-1">{price_kakaku.toString()}</td>
-                    <td className="p-1">{(price_kakaku - price_com).toString()}</td>
-                    <td className="p-1">
+                    <td>
+                      <p className="h4">{price_com.toString()}</p>
+                    </td>
+                    <td>
+                      <p className="h4">{price_kakaku.toString()}</p>
+                    </td>
+                    <td>
+                      <p className="h4">{(price_kakaku - price_com).toString()}</p>
+                    </td>
+                    <td>
                       <Button
                         onClick={() => {
                           this.delete(index);
