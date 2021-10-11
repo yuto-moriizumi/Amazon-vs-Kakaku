@@ -80,11 +80,11 @@ export default class App extends React.Component<{}, State> {
   }
 
   private USD2JPY(str: string) {
-    return Math.round(parseFloat(str.slice(1)) * this.exchange_rate);
+    return Math.round(parseFloat(str) * this.exchange_rate);
   }
 
   private parseJPY(str: string) {
-    return parseInt(str.slice(1).replace(",", ""));
+    return parseInt(str);
   }
 
   render() {
