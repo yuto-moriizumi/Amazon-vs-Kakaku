@@ -6,7 +6,7 @@
     "dev": "ts-node-dev --poll ./bin/www"
   },
   "dependencies": {
-    "axios": "^0.21.1",
+    "axios": "^0.28.0",
     "cors": "^2.8.5",
     "dayjs": "^1.10.7",
     "express": "^4.17.1",
